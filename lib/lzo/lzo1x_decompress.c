@@ -16,8 +16,9 @@
 #include <linux/kernel.h>
 #endif
 
-#include <asm/unaligned.h>
 #include <linux/lzo.h>
+#include <asm/byteorder.h>
+#include <asm/unaligned.h>
 #include "lzodefs.h"
 
 #define HAVE_IP(x, ip_end, ip) ((size_t)(ip_end - ip) < (x))
