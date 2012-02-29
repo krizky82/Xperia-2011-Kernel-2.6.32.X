@@ -2764,9 +2764,9 @@ void wake_up_new_task(struct task_struct *p, unsigned long clone_flags)
 {
 	unsigned long flags;
 	struct rq *rq;
-	int cpu __maybe_unused = get_cpu();
 
 #ifdef CONFIG_SMP
+	get_cpu();
 	rq = task_rq_lock(p, &flags);
 	p->state = TASK_WAKING;
 
@@ -2778,8 +2778,7 @@ void wake_up_new_task(struct task_struct *p, unsigned long clone_flags)
 	 * We set TASK_WAKING so that select_task_rq() can drop rq->lock
 	 * without people poking at ->cpus_allowed.
 	 */
-	cpu = select_task_rq(rq, p, SD_BALANCE_FORK, 0);
-	set_task_cpu(p, cpu);
+	set_task_cpu(p, select_task_rq(p, SD_BALANCE_FORK, 0));
 
 	p->state = TASK_RUNNING;
 	task_rq_unlock(rq, &flags);
@@ -2795,7 +2794,9 @@ void wake_up_new_task(struct task_struct *p, unsigned long clone_flags)
 		p->sched_class->task_woken(rq, p);
 #endif
 	task_rq_unlock(rq, &flags);
-	put_cpu();
+#ifdef CONFIG_SMP
+ 	put_cpu();
+#endif
 }
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
