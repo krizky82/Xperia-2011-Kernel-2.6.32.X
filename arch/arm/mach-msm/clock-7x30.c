@@ -363,6 +363,7 @@ static struct clk_freq_tbl clk_tbl_mfc[] = {
 
 static struct clk_freq_tbl clk_tbl_spi[] = {
 	F_MND8( 9963243, 19, 12, PLL3, 4,   7,   129, NOMINAL),
+    F_MND8(24576000, 19, 12, LPXO, 1,   0,     0, NOMINAL),
 	F_MND8(26331429, 19, 12, PLL3, 4,  34,   241, NOMINAL),
 	F_END,
 };
