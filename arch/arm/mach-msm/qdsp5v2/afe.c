@@ -175,6 +175,7 @@ int afe_enable(u8 path_id, struct msm_afe_config *config)
 				msm_adsp_disable(afe->mod);
 				msm_adsp_put(afe->mod);
 				afe->aux_conf_flag = 0;
+				afe->mod = NULL;
 			}
 		}
 
@@ -188,6 +189,7 @@ int afe_enable(u8 path_id, struct msm_afe_config *config)
 
 error_adsp_enable:
 	msm_adsp_put(afe->mod);
+	afe->mod = NULL;
 error_adsp_get:
 	mutex_unlock(&afe->lock);
 	return rc;
@@ -228,6 +230,7 @@ int afe_config_fm_codec(int fm_enable, uint16_t source)
 	return rc;
 error_adsp_enable:
 	msm_adsp_put(afe->mod);
+	afe->mod = NULL;
 error_adsp_get:
 	mutex_unlock(&afe->lock);
 	return rc;
@@ -263,6 +266,7 @@ int afe_config_fm_volume(uint16_t volume)
 	return rc;
 error_adsp_enable:
 	msm_adsp_put(afe->mod);
+	afe->mod = NULL;
 error_adsp_get:
 	mutex_unlock(&afe->lock);
 	return rc;
@@ -301,6 +305,7 @@ int afe_config_fm_calibration_gain(uint16_t device_id,
 	return rc;
 error_adsp_enable:
 	msm_adsp_put(afe->mod);
+	afe->mod = NULL;
 error_adsp_get:
 	mutex_unlock(&afe->lock);
 	return rc;
@@ -342,6 +347,7 @@ int afe_config_aux_codec(int pcm_ctl_value, int aux_codec_intf_value,
 	return rc;
 error_adsp_enable:
 	msm_adsp_put(afe->mod);
+	afe->mod = NULL;
 error_adsp_get:
 	mutex_unlock(&afe->lock);
 	return rc;
@@ -373,6 +379,7 @@ int afe_disable(u8 path_id)
 		msm_adsp_disable(afe->mod);
 		msm_adsp_put(afe->mod);
 		afe->aux_conf_flag = 0;
+		afe->mod = NULL;
 	}
 	mutex_unlock(&afe->lock);
 	return rc;
