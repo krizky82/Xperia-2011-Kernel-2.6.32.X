@@ -222,7 +222,7 @@ static void kgsl_ringbuffer_submit(struct kgsl_ringbuffer *rb)
 	rb->flags |= KGSL_FLAGS_ACTIVE;
 }
 
-static int
+static void
 kgsl_ringbuffer_waitspace(struct kgsl_ringbuffer *rb, unsigned int numcmds,
 			  int wptr_ahead)
 {
@@ -266,7 +266,6 @@ kgsl_ringbuffer_waitspace(struct kgsl_ringbuffer *rb, unsigned int numcmds,
 
 	KGSL_CMD_VDBG("return %d\n", 0);
 
-	return 0;
 }
 
 
@@ -274,7 +273,6 @@ static unsigned int *kgsl_ringbuffer_allocspace(struct kgsl_ringbuffer *rb,
 					     unsigned int numcmds)
 {
 	unsigned int	*ptr = NULL;
-	int				status = 0;
 
 	BUG_ON(numcmds >= rb->sizedwords);
 
@@ -284,22 +282,20 @@ static unsigned int *kgsl_ringbuffer_allocspace(struct kgsl_ringbuffer *rb,
 		/* reserve dwords for nop packet */
 		if ((rb->wptr + numcmds) > (rb->sizedwords -
 				GSL_RB_NOP_SIZEDWORDS))
-			status = kgsl_ringbuffer_waitspace(rb, numcmds, 1);
+			kgsl_ringbuffer_waitspace(rb, numcmds, 1);
 	} else {
 		/* wptr behind rptr */
 		if ((rb->wptr + numcmds) >= rb->rptr)
-			status  = kgsl_ringbuffer_waitspace(rb, numcmds, 0);
+			kgsl_ringbuffer_waitspace(rb, numcmds, 0);
 		/* check for remaining space */
 		/* reserve dwords for nop packet */
 		if ((rb->wptr + numcmds) > (rb->sizedwords -
 				GSL_RB_NOP_SIZEDWORDS))
-			status = kgsl_ringbuffer_waitspace(rb, numcmds, 1);
+			kgsl_ringbuffer_waitspace(rb, numcmds, 1);
 	}
 
-	if (status == 0) {
-		ptr = (unsigned int *)rb->buffer_desc.hostptr + rb->wptr;
-		rb->wptr += numcmds;
-	}
+	ptr = (unsigned int *)rb->buffer_desc.hostptr + rb->wptr;
+	rb->wptr += numcmds;
 
 	return ptr;
 }
@@ -543,7 +539,7 @@ int kgsl_ringbuffer_start(struct kgsl_ringbuffer *rb)
 	return status;
 }
 
-int kgsl_ringbuffer_stop(struct kgsl_ringbuffer *rb)
+void kgsl_ringbuffer_stop(struct kgsl_ringbuffer *rb)
 {
 	KGSL_CMD_VDBG("enter (rb=%p)\n", rb);
 
@@ -560,7 +556,6 @@ int kgsl_ringbuffer_stop(struct kgsl_ringbuffer *rb)
 
 	KGSL_CMD_VDBG("return %d\n", 0);
 
-	return 0;
 }
 
 int kgsl_ringbuffer_init(struct kgsl_device *device)
@@ -603,7 +598,7 @@ int kgsl_ringbuffer_init(struct kgsl_device *device)
 	return 0;
 }
 
-int kgsl_ringbuffer_close(struct kgsl_ringbuffer *rb)
+void kgsl_ringbuffer_close(struct kgsl_ringbuffer *rb)
 {
 	KGSL_CMD_VDBG("enter (rb=%p)\n", rb);
 
@@ -618,7 +613,6 @@ int kgsl_ringbuffer_close(struct kgsl_ringbuffer *rb)
 	memset(rb, 0, sizeof(struct kgsl_ringbuffer));
 
 	KGSL_CMD_VDBG("return %d\n", 0);
-	return 0;
 }
 
 static uint32_t
