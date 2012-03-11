@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2011, Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -68,6 +68,15 @@ enum kgsl_clk_freq {
 #define DRM_KGSL_GEM_CACHE_OP_TO_DEV	0x0001
 #define DRM_KGSL_GEM_CACHE_OP_FROM_DEV	0x0002
 
+/* The size of each entry in a page table */
+#define KGSL_PAGETABLE_ENTRY_SIZE  4
+
+/* Extra accounting entries needed in the pagetable */
+#define KGSL_PT_EXTRA_ENTRIES      16
+
+#define KGSL_PAGETABLE_ENTRIES(_sz) (((_sz) >> KGSL_PAGESIZE_SHIFT) + \
+				     KGSL_PT_EXTRA_ENTRIES)
+
 struct kgsl_driver {
 	struct cdev cdev;
 	dev_t dev_num;
@@ -103,8 +112,8 @@ struct kgsl_driver {
 
 	struct kgsl_sharedmem shmem;
 
-	/* Global list of device_private struct one per open file descriptor */
-	struct list_head dev_priv_list;
+	/* Global lilst of open processes */
+	struct list_head process_list;
 	/* Global list of pagetables */
 	struct list_head pagetable_list;
 	/* Mutex for accessing the pagetable list */
@@ -112,6 +121,24 @@ struct kgsl_driver {
 
 	struct kgsl_pagetable *global_pt;
 
+	/* Size (in bytes) for each pagetable */
+	unsigned int ptsize;
+
+	/* The virtual address range for each pagetable as set by the
+	   platform */
+
+	unsigned int pt_va_size;
+
+	/* A structure for information about the pool of
+	   pagetable memory */
+
+	struct {
+		unsigned long *bitmap;
+		int entries;
+		spinlock_t lock;
+		void *hostptr;
+		unsigned int physaddr;
+	} ptpool;
 	struct work_struct idle_callback_work;
 	void (*idle_callback)(int idle);
 };
@@ -122,11 +149,10 @@ struct kgsl_mem_entry {
 	struct kgsl_memdesc memdesc;
 	struct file *file_ptr;
 	struct list_head list;
-	struct list_head free_list;
 	uint32_t free_timestamp;
 	/* back pointer to private structure under whose context this
 	* allocation is made */
-	struct kgsl_file_private *priv;
+	struct kgsl_process_private *priv;
 };
 
 enum kgsl_status {
@@ -162,7 +188,7 @@ while (1) { \
 #define MMU_CONFIG 1
 #endif
 
-void kgsl_remove_mem_entry(struct kgsl_mem_entry *entry, bool preserve);
+void kgsl_destroy_mem_entry(struct kgsl_mem_entry *entry);
 
 int kgsl_pwrctrl(unsigned int pwrflag);
 void kgsl_timer(unsigned long data);
