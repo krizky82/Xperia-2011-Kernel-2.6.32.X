@@ -642,7 +642,6 @@ msm_i2c_probe(struct platform_device *pdev)
 	dev->one_bit_t = USEC_PER_SEC/pdata->clk_freq;
 	spin_lock_init(&dev->lock);
 	platform_set_drvdata(pdev, dev);
-
 	wake_lock_init(&dev->wakelock, WAKE_LOCK_SUSPEND, "msm-i2c");
 
 	clk_enable(clk);
@@ -699,6 +698,7 @@ msm_i2c_probe(struct platform_device *pdev)
 	}
 	pm_qos_add_requirement(PM_QOS_CPU_DMA_LATENCY, "msm_i2c",
 					PM_QOS_DEFAULT_VALUE);
+
 	disable_irq(dev->irq);
 	dev->suspended = 0;
 	mutex_init(&dev->mlock);
@@ -711,7 +711,6 @@ msm_i2c_probe(struct platform_device *pdev)
 
 	return 0;
 
-/*	free_irq(dev->irq, dev); */
 err_request_irq_failed:
 	i2c_del_adapter(&dev->adap_pri);
 	i2c_del_adapter(&dev->adap_aux);
@@ -751,7 +750,8 @@ msm_i2c_remove(struct platform_device *pdev)
 	iounmap(dev->base);
 	kfree(dev);
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	release_mem_region(mem->start, (mem->end - mem->start) + 1);
+	if (mem)
+		release_mem_region(mem->start, (mem->end - mem->start) + 1);
 	return 0;
 }
 
