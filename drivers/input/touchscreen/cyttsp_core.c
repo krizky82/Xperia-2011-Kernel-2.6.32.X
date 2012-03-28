@@ -153,13 +153,19 @@
 
 #define CYTTSP_SCAN_PERIOD          20
 #define CYTTSP_BL_READY_TIME        30
-#define CYTTSP_ENTER_BLDR_TIME      6000
+#define CYTTSP_ENTER_BLDR_TIME      10000
 #define CYTTSP_BL_ENTER_TIME        100
 #define CY_LOUNCH_APP_TIME          400
 
 #define CY_BL_BUSY                  (1 << 7)
 #define CY_BL_RECEPTIVE             (1 << 5)
 #define CY_APP_CHKSUM               (1 << 0)
+
+#define CY_CALI_IDAC_FORCE_GAIN	(1 << 7)
+#define CY_CALI_IDAC_GAIN1	0x00
+#define CY_CALI_IDAC_GAIN2	0x01
+#define CY_CALI_IDAC_GAIN4	0x02
+#define CY_CALI_IDAC_GAIN8	0x03
 
 /* TrueTouch Standard Product Gen3 (Txx3xx) interface definition */
 struct cyttsp_xydata {
@@ -251,7 +257,6 @@ enum mfg_command_status {
 	CY_MFG_DONE = CY_MFG_STAT_COMPLETE | CY_MFG_STAT_PASS,
 };
 
-static const u8 CY_MFG_CMD_IDAC[] = {0x20, 0x00};
 static const u8 CY_MFG_CMD_CLR_STATUS[] = {0x2f};
 
 /* TTSP Bootloader Register Map interface definition */
@@ -1379,6 +1384,7 @@ success:
 	atomic_set(&ts->mode, MODE_SYSINFO);
 	dev_info(ts->pdev, "%s: mode entered.\n", __func__);
 	msleep(CYTTSP_SCAN_PERIOD);
+	cyttsp_handshake(ts);
 	rc = ttsp_read_block_data(ts, CY_REG_BASE,
 				sizeof(ts->sysinfo_data), &(ts->sysinfo_data));
 	dev_info(ts->pdev, "%s: SI2:tts_ver=0x%02X%02X app_id=0x%02X%02X "
@@ -1737,7 +1743,7 @@ static void cyttsp_ts_early_suspend(struct early_suspend *h)
 	LOCK(ts->mutex);
 	ts->suspended = 1;
 	if (!ts->fw_loader_mode) {
-		disable_irq_nosync(ts->irq);
+		disable_irq(ts->irq);
 		dev_dbg(ts->pdev, "%s: stop ESD check\n", __func__);
 		cancel_delayed_work_sync(&ts->work);
 		cyttsp_suspend(ts);
@@ -1828,6 +1834,31 @@ static struct bin_attribute cyttsp_firmware = {
 	.write = firmware_write,
 };
 
+static u8 cyttsp_get_idac_gain(struct cyttsp *ts)
+{
+	u8 ret;
+
+	switch (ts->platform_data->idac_gain) {
+	case 1:
+		ret = CY_CALI_IDAC_FORCE_GAIN | CY_CALI_IDAC_GAIN1;
+		break;
+	case 2:
+		ret = CY_CALI_IDAC_FORCE_GAIN | CY_CALI_IDAC_GAIN2;
+		break;
+	case 4:
+		ret = CY_CALI_IDAC_FORCE_GAIN | CY_CALI_IDAC_GAIN4;
+		break;
+	case 8:
+		ret = CY_CALI_IDAC_FORCE_GAIN | CY_CALI_IDAC_GAIN8;
+		break;
+	default:
+		ret = 0x00;
+		break;
+	}
+
+	return ret;
+}
+
 static ssize_t attr_fwloader_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -1865,11 +1896,53 @@ static ssize_t attr_custid_show(struct device *dev,
 }
 
 
+
+static ssize_t attr_calibration_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	int ret;
+	u8 CY_MFG_CMD_IDAC[] = {0x20, 0x00};
+	struct cyttsp *ts = dev_get_drvdata(dev);
+
+	LOCK(ts->mutex);
+
+	if (ts->suspended) {
+		cyttsp_resume(ts);
+		enable_irq(ts->irq);
+	}
+
+	if (cyttsp_set_sysinfo_mode(ts))
+		goto error;
+
+	CY_MFG_CMD_IDAC[1] = cyttsp_get_idac_gain(ts);
+	ret = cyttsp_execute_mfg_command(ts, CY_MFG_CMD_IDAC,
+		sizeof(CY_MFG_CMD_IDAC), true);
+	if (ret)
+		goto error;
+
+	if (cyttsp_set_operational_mode(ts))
+		cyttsp_power_on(ts);
+
+	if (ts->suspended) {
+		dev_info(ts->pdev, "%s: suspending.\n", __func__);
+		disable_irq(ts->irq);
+		cyttsp_suspend(ts);
+		cancel_delayed_work_sync(&ts->work);
+	}
+	UNLOCK(ts->mutex);
+	return snprintf(buf, PAGE_SIZE, "done\n");
+
+error:
+	UNLOCK(ts->mutex);
+	return snprintf(buf, PAGE_SIZE, "fail\n");
+}
+
 static ssize_t attr_fwloader_store(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t size)
 {
 	int ret;
+	u8 CY_MFG_CMD_IDAC[] = {0x20, 0x00};
 	struct cyttsp *ts = dev_get_drvdata(dev);
 	unsigned long val;
 
@@ -1903,6 +1976,7 @@ remove_file:
 			goto bypass;
 		ret = cyttsp_set_sysinfo_mode(ts);
 		if (!ret) {
+			CY_MFG_CMD_IDAC[1] = cyttsp_get_idac_gain(ts);
 			cyttsp_execute_mfg_command(ts, CY_MFG_CMD_IDAC,
 				sizeof(CY_MFG_CMD_IDAC), true);
 			cyttsp_execute_mfg_command(ts, CY_MFG_CMD_CLR_STATUS,
@@ -1973,6 +2047,7 @@ static struct device_attribute attributes[] = {
 #ifdef CONFIG_TOUCHSCREEN_CYTTSP_CHARGER_MODE
 	__ATTR(touch_cmd, 0200, NULL, attr_cmd_store),
 #endif
+	__ATTR(calibration, 0400, attr_calibration_show, NULL),
 };
 
 static int add_sysfs_interfaces(struct device *dev)
