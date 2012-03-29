@@ -25,7 +25,6 @@
 #include <linux/completion.h>
 #include <linux/cdrom.h>
 #include <linux/ratelimit.h>
-#include <linux/slab.h>
 #include <linux/times.h>
 #include <asm/uaccess.h>
 

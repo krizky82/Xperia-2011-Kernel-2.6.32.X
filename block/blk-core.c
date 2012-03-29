@@ -22,7 +22,6 @@
 #include <linux/string.h>
 #include <linux/init.h>
 #include <linux/completion.h>
-#include <linux/slab.h>
 #include <linux/swap.h>
 #include <linux/writeback.h>
 #include <linux/task_io_accounting_ops.h>
