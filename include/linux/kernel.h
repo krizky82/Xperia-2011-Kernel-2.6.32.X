@@ -18,7 +18,6 @@
 #include <linux/ratelimit.h>
 #include <linux/dynamic_debug.h>
 #include <asm/byteorder.h>
-#include <asm/bug.h>
 
 extern const char linux_banner[];
 extern const char linux_proc_banner[];
