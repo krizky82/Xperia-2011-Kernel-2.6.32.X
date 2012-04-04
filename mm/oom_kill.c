@@ -28,7 +28,6 @@
 #include <linux/memcontrol.h>
 #include <linux/security.h>
 #include <linux/freezer.h>
-#include <linux/ratelimit.h>
 
 int sysctl_panic_on_oom;
 int sysctl_oom_kill_allocating_task;
@@ -397,10 +396,8 @@ static int oom_kill_process(struct task_struct *p, gfp_t gfp_mask, int order,
 			    const char *message)
 {
 	struct task_struct *c;
-	static DEFINE_RATELIMIT_STATE(oom_rs, DEFAULT_RATELIMIT_INTERVAL,
-					DEFAULT_RATELIMIT_BURST);
 
-	if (__ratelimit(&oom_rs)) {
+	if (printk_ratelimit()) {
 		printk(KERN_WARNING "%s invoked oom-killer: "
 			"gfp_mask=0x%x, order=%d, oom_adj=%d\n",
 			current->comm, gfp_mask, order,
