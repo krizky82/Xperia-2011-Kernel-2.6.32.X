@@ -188,7 +188,7 @@ ENTRY(v7_coherent_user_range)
 	sub	r3, r2, #1
 	bic	r12, r0, r3
 2:
- USER(  mcr	p15, 0, r12, c7, c5, 1  )	@ invalidate I line
+ USER(	mcr	p15, 0, r12, c7, c5, 1  )	@ invalidate I line
 	add	r12, r12, r2
 	cmp	r12, r1
 	blo	2b
