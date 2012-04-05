@@ -50,7 +50,7 @@ void ram_console_enable_console(int enabled)
 		ram_console.flags &= ~CON_ENABLED;
 }
 
-static int ram_console_driver_probe(struct platform_device *pdev)
+static int __init ram_console_probe(struct platform_device *pdev)
 {
 	struct resource *res = pdev->resource;
 	size_t start;
@@ -97,7 +97,6 @@ err:
 }
 
 static struct platform_driver ram_console_driver = {
-	.probe = ram_console_driver_probe,
 	.driver		= {
 		.name	= "ram_console",
 	},
@@ -105,9 +104,7 @@ static struct platform_driver ram_console_driver = {
 
 static int __init ram_console_module_init(void)
 {
-	int err;
-	err = platform_driver_register(&ram_console_driver);
-	return err;
+	return platform_driver_probe(&ram_console_driver, ram_console_probe);
 }
 
 static ssize_t ram_console_read_old(struct file *file, char __user *buf,
@@ -171,6 +168,9 @@ static int __init ram_console_late_init(void)
 {
 	struct proc_dir_entry *entry;
 	struct persistent_ram_zone *prz = &ram_console_zone;
+
+	if (!prz)
+		return 0;
 
 	if (persistent_ram_old_size(prz) == 0)
 		return 0;
