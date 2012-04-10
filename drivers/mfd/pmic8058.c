@@ -25,6 +25,7 @@
 #include <linux/mfd/core.h>
 #include <linux/mfd/pmic8058.h>
 #include <linux/platform_device.h>
+#include <linux/ratelimit.h>
 
 /* PMIC8058 Revision */
 #define SSBI_REG_REV			0x002  /* PMIC4 revision */
