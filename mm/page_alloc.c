@@ -2340,6 +2340,59 @@ static void zoneref_set_zone(struct zone *zone, struct zoneref *zoneref)
 	zoneref->zone_idx = zone_idx(zone);
 }
 
+/* the zone is lowmem if zone_idx(zone) <= lowmem_zone */
+int lowmem_zone __read_mostly;
+/*
+ * Find out LOWMEM zone on this host. LOWMEM means a zone for special use
+ * and its size seems small and precious than other zones. For example,
+ * NORMAL zone is considered to be LOWMEM on a host which has HIGHMEM.
+ *
+ * This lowmem zone is determined by zone ordering and equipped memory layout.
+ * The amount of memory is not taken into account now.
+ */
+static void find_lowmem_zone(void)
+{
+	unsigned long pages[MAX_NR_ZONES];
+	struct zone *zone;
+	int idx;
+
+	for (idx = 0; idx < MAX_NR_ZONES; idx++)
+		pages[idx] = 0;
+	/* count the number of pages */
+	for_each_populated_zone(zone) {
+		idx = zone_idx(zone);
+		pages[idx] += zone->present_pages;
+	}
+	/* If We have HIGHMEM...we ignore ZONE_MOVABLE in this case. */
+#ifdef CONFIG_HIGHMEM
+	if (pages[ZONE_HIGHMEM]) {
+		lowmem_zone = ZONE_NORMAL;
+		return;
+	}
+#endif
+	/* If We have MOVABLE zone...which works like HIGHMEM. */
+	if (pages[ZONE_MOVABLE]) {
+		lowmem_zone = ZONE_NORMAL;
+		return;
+	}
+#ifdef CONFIG_ZONE_DMA32
+	/* If we have DMA32 and there is ZONE_NORMAL...*/
+	if (pages[ZONE_DMA32] && pages[ZONE_NORMAL]) {
+		lowmem_zone = ZONE_DMA32;
+		return;
+	}
+#endif
+#ifdef CONFIG_ZONE_DMA
+	/* If we have DMA and there is ZONE_NORMAL...*/
+	if (pages[ZONE_DMA] && pages[ZONE_NORMAL]) {
+		lowmem_zone = ZONE_DMA;
+		return;
+	}
+#endif
+	lowmem_zone = -1;
+	return;
+}
+
 /*
  * Builds allocation fallback zone lists.
  *
@@ -2819,12 +2872,21 @@ void build_all_zonelists(void)
 	else
 		page_group_by_mobility_disabled = 0;
 
+	find_lowmem_zone();
+
 	printk("Built %i zonelists in %s order, mobility grouping %s.  "
 		"Total pages: %ld\n",
 			nr_online_nodes,
 			zonelist_order_name[current_zonelist_order],
 			page_group_by_mobility_disabled ? "off" : "on",
 			vm_total_pages);
+
+	if (lowmem_zone >= 0)
+		printk("LOWMEM zone is detected as %s\n",
+			zone_names[lowmem_zone]);
+	else
+		printk("There are no special LOWMEM. The system seems flat\n");
+
 #ifdef CONFIG_NUMA
 	printk("Policy zone: %s\n", zone_names[policy_zone]);
 #endif
