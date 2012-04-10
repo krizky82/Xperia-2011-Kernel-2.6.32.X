@@ -936,11 +936,10 @@ static inline void dec_mm_counter(struct mm_struct *mm, int member)
 
 #endif /* !USE_SPLIT_PTLOCKS */
 
-static inline unsigned long get_mm_rss(struct mm_struct *mm)
-{
-	return get_mm_counter(mm, MM_FILEPAGES) +
-		get_mm_counter(mm, MM_ANONPAGES);
-}
+unsigned long get_mm_rss(struct mm_struct *mm);
+unsigned long get_file_rss(struct mm_struct *mm);
+unsigned long get_anon_rss(struct mm_struct *mm);
+unsigned long get_low_rss(struct mm_struct *mm);
 
 static inline unsigned long get_mm_hiwater_rss(struct mm_struct *mm)
 {
@@ -973,6 +972,23 @@ static inline void setmax_mm_hiwater_rss(unsigned long *maxrss,
 
 	if (*maxrss < hiwater_rss)
 		*maxrss = hiwater_rss;
+}
+
+/* Utility for lowmem counting */
+static inline void
+inc_mm_counter_page(struct mm_struct *mm, int member, struct page *page)
+{
+	if (unlikely(is_lowmem_page(page)))
+		member += LOWMEM_COUNTER;
+	inc_mm_counter(mm, member);
+}
+
+static inline void
+dec_mm_counter_page(struct mm_struct *mm, int member, struct page *page)
+{
+	if (unlikely(is_lowmem_page(page)))
+		member += LOWMEM_COUNTER;
+	dec_mm_counter(mm, member);
 }
 
 void sync_mm_rss(struct task_struct *task, struct mm_struct *mm);
@@ -1030,6 +1046,7 @@ int __pmd_alloc(struct mm_struct *mm, pud_t *pud, unsigned long address);
 
 int __pte_alloc(struct mm_struct *mm, pmd_t *pmd, unsigned long address);
 int __pte_alloc_kernel(pmd_t *pmd, unsigned long address);
+
 
 /*
  * The following ifdef needed to get the 4level-fixup.h header to work.

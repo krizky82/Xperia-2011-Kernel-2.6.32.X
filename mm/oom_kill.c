@@ -399,11 +399,13 @@ static void __oom_kill_task(struct task_struct *p, int verbose)
 
 	if (verbose)
 		printk(KERN_ERR "Killed process %d (%s) "
-		       "vsz:%lukB, anon-rss:%lukB, file-rss:%lukB\n",
+		       "vsz:%lukB, anon-rss:%lukB, file-rss:%lukB "
+			"lowmem %lukB\n",
 		       task_pid_nr(p), p->comm,
 		       K(p->mm->total_vm),
-		       K(get_mm_counter(p->mm, MM_ANONPAGES)),
-		       K(get_mm_counter(p->mm, MM_FILEPAGES)));
+		       K(get_anon_rss(p->mm)),
+		       K(get_file_rss(p->mm)),
+			K(get_low_rss(p->mm)));
 	task_unlock(p);
 
 	/*

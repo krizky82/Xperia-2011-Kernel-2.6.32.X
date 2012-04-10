@@ -194,11 +194,14 @@ struct core_state {
 };
 
 enum {
-	MM_FILEPAGES,
-	MM_ANONPAGES,
+	MM_FILEPAGES,	/* file's rss is MM_FILEPAGES + MM_LOW_FILEPAGES */
+	MM_ANONPAGES,   /* anon`'s rss is MM_FILEPAGES + MM_LOW_FILEPAGES */
+	MM_FILE_LOWPAGES, /* pages from lower zones in file rss*/
+	MM_ANON_LOWPAGES, /* pages from lower zones in anon rss*/
 	MM_SWAPENTS,
 	NR_MM_COUNTERS
 };
+#define LOWMEM_COUNTER	2
 
 #if USE_SPLIT_PTLOCKS
 #define SPLIT_RSS_COUNTING
