@@ -1327,7 +1327,7 @@ static int zcache_new_pool(uint32_t flags)
 	int poolid = -1;
 	struct tmem_pool *pool;
 
-	pool = kmalloc(sizeof(struct tmem_pool), GFP_KERNEL);
+	pool = kmalloc(sizeof(struct tmem_pool), GFP_ATOMIC);
 	if (pool == NULL) {
 		pr_info("zcache: pool creation failed: out of memory\n");
 		goto out;
