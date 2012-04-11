@@ -36,6 +36,14 @@ config ZRAM_DEFAULT_PERCENTAGE
 	help
 	  Select default zram disk size: percentage of total RAM
 
+config ZRAM_DEBUG
+	bool "Compressed RAM block device debug support"
+	depends on ZRAM
+	default n
+	help
+	  This option adds additional debugging code to the compressed
+	  RAM block device driver.
+
 choice ZRAM_COMPRESS
 	prompt "compression method"
 	depends on ZRAM
@@ -60,6 +68,6 @@ endchoice
 config ZRAM_DEFAULT_DISKSIZE
 	int "Default size of zram in bytes"
 	depends on ZRAM
-	default 104857600
+	default 100663296
 	help
-	  Set default zram disk size (default ~ 100MB)
+	  Set default zram disk size (default ~ 96MB)
